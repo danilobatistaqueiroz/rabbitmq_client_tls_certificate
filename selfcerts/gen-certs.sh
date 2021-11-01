@@ -1,6 +1,15 @@
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+WHITE='\033[0;37m'
+NC='\033[0m' # No Color
+
+set -x #echo on
+
 rm -rf testca;
 rm -rf server;
 rm -rf client;
+
+echo "${GREEN}generating ca${NC}"
 
 mkdir testca;
 cd testca;
@@ -12,6 +21,7 @@ cp ../openssl.txt openssl.cnf;
 openssl req -x509 -config openssl.cnf -newkey rsa:2048 -days 365 -out ca_certificate.pem -outform PEM -subj /CN=MyTestCA/ -nodes;
 openssl x509 -in ca_certificate.pem -out ca_certificate.cer -outform DER;
 
+echo "${GREEN}generating server${NC}"
 
 cd ..;
 mkdir server;
@@ -23,6 +33,7 @@ openssl ca -config openssl.cnf -in ../server/req.pem -out ../server/server_certi
 cd ../server;
 openssl pkcs12 -export -out server_certificate.p12 -in server_certificate.pem -inkey private_key.pem -passout pass:rabbit;
 
+echo "${GREEN}generating client${NC}"
 
 cd ..;
 mkdir client;
