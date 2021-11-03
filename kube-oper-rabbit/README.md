@@ -184,8 +184,8 @@ kubectl apply -f ~/labs/rabbitmq/kube-oper-rabbit/node-port.yaml
 kubectl get svc  
 kubectl get pod  
 kubectl get all  
-NAME                   TYPE         CLUSTER-IP    EXTERNAL-IP     PORT
-service/triple-rabbit  LoadBalancer 10.96.186.6   172.18.255.200  5672:32439/TCP,15672:30034/TCP,15692:32573/TCP
+NAME                   TYPE         CLUSTER-IP    EXTERNAL-IP     PORT  
+service/triple-rabbit  LoadBalancer 10.96.186.6   172.18.255.200  5672:32439/TCP,15672:30034/TCP,15692:32573/TCP  
 
 **as portas mapeadas são 15671 com TLS e 15672 sem TLS**  
 
@@ -195,18 +195,18 @@ kubectl exec -it triple-rabbit-server-0 -- rabbitmqctl set_permissions -p "/" "d
 
 
 ### verificar o cluster rabbitmq
- username="$(kubectl get secret triple-rabbit-default-user -o jsonpath='{.data.username}' | base64 --decode)"
- password="$(kubectl get secret triple-rabbit-default-user -o jsonpath='{.data.password}' | base64 --decode)"
- service="$(kubectl get service triple-rabbit -o jsonpath='{.spec.clusterIP}')"
- kubectl run perf-test --image=pivotalrabbitmq/perf-test -- --uri amqp://$username:$password@$service
+ username="$(kubectl get secret triple-rabbit-default-user -o jsonpath='{.data.username}' | base64 --decode)"  
+ password="$(kubectl get secret triple-rabbit-default-user -o jsonpath='{.data.password}' | base64 --decode)"  
+ service="$(kubectl get service triple-rabbit -o jsonpath='{.spec.clusterIP}')"  
+ kubectl run perf-test --image=pivotalrabbitmq/perf-test -- --uri amqp://$username:$password@$service  
  --ou--  
  kubectl rabbitmq perf-test triple-rabbit  
 
- echo $password
- echo $username
- kubectl logs --follow perf-test
- kubectl delete pod perf-test
- kubectl delete svc perf-test
+ echo $password  
+ echo $username  
+ kubectl logs --follow perf-test  
+ kubectl delete pod perf-test  
+ kubectl delete svc perf-test  
 
 
 curl http://172.18.255.200:15672/  
@@ -225,28 +225,29 @@ kubectl logs triple-rabbit-server-0
 
 kubectl rabbitmq tail triple-rabbit  
 
-username="$(kubectl get secret triple-rabbit-default-user -o jsonpath='{.data.username}' | base64 --decode)"
-password="$(kubectl get secret triple-rabbit-default-user -o jsonpath='{.data.password}' | base64 --decode)"
-service="$(kubectl get service triple-rabbit -o jsonpath='{.spec.clusterIP}')"
+username="$(kubectl get secret triple-rabbit-default-user -o jsonpath='{.data.username}' | base64 --decode)"  
+password="$(kubectl get secret triple-rabbit-default-user -o jsonpath='{.data.password}' | base64 --decode)"  
+service="$(kubectl get service triple-rabbit -o jsonpath='{.spec.clusterIP}')"  
 kubectl rabbitmq manage triple-rabbit  
 
-kubectl exec -it triple-rabbit-server-0 -- bash
+kubectl exec -it triple-rabbit-server-0 -- bash  
 
-rabbitmq@triple-rabbit-server-0:/$ rabbitmq-diagnostics listeners
-Asking node rabbit@triple-rabbit-server-0.triple-rabbit-nodes.rabbit-ns to report its protocol listeners ...
-Interface: [::], port: 15672, protocol: http, purpose: HTTP API
-Interface: [::], port: 15671, protocol: https, purpose: HTTP API over TLS (HTTPS)
-Interface: [::], port: 15692, protocol: http/prometheus, purpose: Prometheus exporter API over HTTP
-Interface: [::], port: 15691, protocol: https/prometheus, purpose: Prometheus exporter API over TLS (HTTPS)
-Interface: [::], port: 25672, protocol: clustering, purpose: inter-node and CLI tool communication
-Interface: [::], port: 5672, protocol: amqp, purpose: AMQP 0-9-1 and AMQP 1.0
-Interface: [::], port: 5671, protocol: amqp/ssl, purpose: AMQP 0-9-1 and AMQP 1.0 over TLS
+rabbitmq@triple-rabbit-server-0:/$ rabbitmq-diagnostics listeners  
+Asking node rabbit@triple-rabbit-server-0.triple-rabbit-nodes.rabbit-ns to report its protocol listeners ...  
+Interface: [::], port: 15672, protocol: http, purpose: HTTP API  
+Interface: [::], port: 15671, protocol: https, purpose: HTTP API over TLS (HTTPS)  
+Interface: [::], port: 15692, protocol: http/prometheus, purpose: Prometheus exporter API over HTTP  
+Interface: [::], port: 15691, protocol: https/prometheus, purpose: Prometheus exporter API over TLS (HTTPS)  
+Interface: [::], port: 25672, protocol: clustering, purpose: inter-node and CLI tool communication  
+Interface: [::], port: 5672, protocol: amqp, purpose: AMQP 0-9-1 and AMQP 1.0  
+Interface: [::], port: 5671, protocol: amqp/ssl, purpose: AMQP 0-9-1 and AMQP 1.0 over TLS  
 
 
 rabbitmq-plugins list  
 
 rabbitmqctl cluster_status  
 
+rabbitmq-diagnostics status  
 
 
 
@@ -257,9 +258,31 @@ rm -rf /home/element/labs/rabbitmq/kube-oper-rabbit/tls/rabbitstore
 
 **cria o keystore**  
 
-rm -rf tls/keystore.p12  
-openssl pkcs12 -export -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -export -in tls/cert.crt -inkey tls/private.key -name myalias -out tls/keystore.p12
+cd ../selfcerts  
+./gen-certs.sh  
+./gen-stores.sh  
 
-keytool -import -alias server1 -file /home/element/labs/rabbitmq/kube-oper-rabbit/tls/tls-gen/basic/result/server_certificate.pem -keystore /home/element/labs/rabbitmq/kube-oper-rabbit/tls/rabbitstore
+username="$(kubectl get secret triple-rabbit-default-user -o jsonpath='{.data.username}' | base64 --decode)"  
+password="$(kubectl get secret triple-rabbit-default-user -o jsonpath='{.data.password}' | base64 --decode)"  
+echo $username  
+echo $password  
 
-keytool -import -alias server2 -file /home/element/labs/rabbitmq/kube-oper-rabbit/tls/cert.crt -keystore /home/element/labs/rabbitmq/kube-oper-rabbit/tls/rabbitstore -ext ip:172.18.255.200
+
+
+#### TLS cliente certificate
+consultar o nome de cliente a ser usado:  
+`openssl x509 -in client/client_certificate.pem -nameopt RFC2253 -subject -noout`
+
+criar o keystore:  
+`keytool -importkeystore -srckeystore caclientkeycert.p12 -srcstoretype pkcs12 -srcalias caclientkeycert -srcstorepass rabbit -destkeystore caclientstore -deststorepass rabbit -destalias caclientkeycert -deststoretype pkcs12`  
+
+`keytool -import -alias caclientkeycert -file server/server_certificate.pem -keystore catruststore -deststorepass rabbit -srcstoretype pkcs1`  
+
+criar o usuário:  
+`kubectl exec -it triple-rabbit-server-0 -- rabbitmqctl add_user "client" "elementPC";`  
+
+`kubectl exec -it triple-rabbit-server-0 -- rabbitmqctl set_permissions -p "/" "client" ".*" ".*" ".*";`
+
+`kubectl exec -it triple-rabbit-server-0 -- rabbitmqctl add_user "elementPC" "";`
+
+`kubectl exec -it triple-rabbit-server-0 -- rabbitmqctl set_permissions -p "/" "elementPC" ".*" ".*" ".*";`

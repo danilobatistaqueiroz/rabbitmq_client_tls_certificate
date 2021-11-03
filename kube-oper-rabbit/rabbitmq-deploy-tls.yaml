@@ -4,9 +4,11 @@ metadata:
   name: triple-rabbit
   namespace: rabbit-ns
 spec:
-  replicas: 3
+  image: localhost:5000/rabbitmq:latest
+  replicas: 1
   rabbitmq:
-    #additionalPlugins:
+    additionalPlugins:
+      - rabbitmq_auth_mechanism_ssl
     #  - rabbitmq_top
     #  - rabbitmq_shovel
     additionalConfig: |
@@ -19,7 +21,11 @@ spec:
       cluster_formation.node_cleanup.only_log_warning = true
       cluster_partition_handling = pause_minority
       queue_master_locator = min-masters
-      ssl_options.fail_if_no_peer_cert = false
+      ssl_options.password = rabbit
+      auth_mechanisms.1 = EXTERNAL
+      ssl_options.verify = verify_peer
+      ssl_options.fail_if_no_peer_cert = true
+      ssl_cert_login_from = common_name
   service:
     type: LoadBalancer
   tls:
